@@ -30,6 +30,11 @@ public:
         std::memcpy(data, src, bytes);
     }
 
+    // Stub to satisfy demo build (no-op)
+    void writeDummyData() {
+        std::cout << "[SharedRingBuffer] writeDummyData() is deprecated and now a no-op.\n";
+    }
+
     void close() {
         bip::shared_memory_object::remove(shm_name.c_str());
         std::cout << "[SharedRingBuffer] Closed shared memory (" << shm_name << ")." << std::endl;

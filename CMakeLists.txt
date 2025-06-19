@@ -3,30 +3,36 @@ project(SharedRingBufferExample)
 
 set(CMAKE_CXX_STANDARD 17)
 
-# This tells CMake to use the old `FindBoost` mode
-set(Boost_USE_STATIC_LIBS        OFF)
-set(Boost_USE_MULTITHREADED      ON)
-set(Boost_USE_STATIC_RUNTIME     OFF)
-
 find_package(Boost REQUIRED)
 include_directories(${Boost_INCLUDE_DIRS})
 
-
-# Add this line to include your local headers
+# Find libsndfile
+find_library(SNDFILE_LIBRARY sndfile REQUIRED)
+# Core headers
 include_directories(${CMAKE_SOURCE_DIR}/include)
 
+# Tool headers
+include_directories(${CMAKE_SOURCE_DIR}/tools)
 
-add_executable(ringbuffer_demo
-    src/main.cpp
-    include/SharedRingBuffer.hpp
-)
-
+# === Executables ===
 add_executable(ringbuffer_reader
-    src/reader.cpp
+    src/ringbuffer_reader.cpp
     include/SharedRingBufferReader.hpp
 )
 
-target_link_libraries(ringbuffer_reader)
+add_executable(write_test
+    src/ringbuffer_write_test.cpp
+    include/SharedRingBuffer.hpp
+)
 
-# Since Boost.Interprocess is header-only, no need to link a library
-target_link_libraries(ringbuffer_demo)
+add_executable(read_test
+    src/ringbuffer_read_test.cpp
+    include/SharedRingBufferReader.hpp
+)
+
+add_executable(export_test
+    src/export_test.cpp
+)
+
+target_link_libraries(export_test ${SNDFILE_LIBRARY})
+# No extra linking needed for header-only Boost.Interprocess

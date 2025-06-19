@@ -8,3 +8,5 @@
 /*.exe
 /*.dylib
 *.DS_Store
+/src/export_test.cpp
+/tools/
