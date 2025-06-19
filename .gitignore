@@ -9,4 +9,5 @@
 /*.dylib
 *.DS_Store
 /src/export_test.cpp
+/src/ringbuffer_to_wav.cpp
 /tools/
