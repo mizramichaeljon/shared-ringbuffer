@@ -8,8 +8,8 @@
 namespace plt = matplotlibcpp;
 
 int main() {
-    std::cout << "[Main] Entered reader test main()\n";
-    SharedRingBufferReader reader("ringbuffer_audio");  // now uses hardcoded name internally
+    std::cout << "[SharedRingBufferReader] Shared memory opened successfully.\n";
+    SharedRingBufferReader reader("ringbuffer_audio");
     constexpr int sampleRate = 48000;
     constexpr int N = sampleRate;
 
@@ -19,8 +19,8 @@ int main() {
         if (out.empty()) {
             std::cerr << "[Reader] WARNING: Received empty sample buffer\n";
         } else {
-            std::cout << "[Reader] First: " << out.front()
-                      << ", Last: " << out.back() << "\n";
+            std::cout << "[Reader] First sample: " << out.front()
+                      << ", Last sample: " << out.back() << "\n";
         }
 
         std::ofstream csv("out_" + std::to_string(i) + ".csv");
@@ -36,7 +36,7 @@ int main() {
             plt::xlabel("Sample Index");
             plt::ylabel("Amplitude");
             plt::save("waveform_" + std::to_string(i) + ".png");
-            std::cout << "[Test] Exported CSV and waveform_" << i << ".png\n";
+            std::cout << "[Test] Exported waveform_" << i << ".png\n";
         } catch (const std::exception& e) {
             std::cerr << "[Plotting Error] Failed to create plot " << i << ": " << e.what() << "\n";
         }

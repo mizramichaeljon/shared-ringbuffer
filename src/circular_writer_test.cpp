@@ -1,27 +1,32 @@
 #include "../include/SharedRingBufferWriter.hpp"
 #include <cmath>
+#include <chrono>
 #include <thread>
+#include <iostream>
 
 int main() {
-    constexpr int sampleRate = 48000;
-    constexpr float freq = 440.0f;
-    constexpr int bufferLength = sampleRate;
-    constexpr int blockSize = 512;
+    std::cout << "[Main] Entered writer test main()\n";
 
-    SharedRingBuffer ring("ringbuffer_audio", bufferLength * sizeof(float));
+    const char* shmName = "ringbuffer_audio";
+    const size_t bufferSizeInSamples = 48000;
+    SharedRingBufferWriter writer(shmName, bufferSizeInSamples);
 
-    float phase = 0.0f;
-    float twoPiF = 2 * M_PI * freq / sampleRate;
+    const double sampleRate = 48000.0;
+    const double frequency = 440.0;
+    const double twoPiF = 2.0 * M_PI * frequency;
 
-    while (true) {
-        float buf[blockSize];
-        std::cout << "Writing " << blockSize << " samples to shared memory\n";
-        for (int i = 0; i < blockSize; ++i) {
-            buf[i] = std::sin(phase);
-            phase += twoPiF;
-            if (phase >= 2 * M_PI) phase -= 2 * M_PI;
+    for (int i = 0; i < 5; ++i) {
+        std::vector<float> samples(bufferSizeInSamples);
+        for (size_t j = 0; j < bufferSizeInSamples; ++j) {
+            samples[j] = static_cast<float>(std::sin(twoPiF * j / sampleRate));
         }
-        ring.write(buf, blockSize);
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
+        writer.write(samples.data(), samples.size());
+        std::cout << "[Writer] Wrote " << samples.size() << " samples to shared memory (iteration " << i << ")\n";
+
+        std::this_thread::sleep_for(std::chrono::seconds(1));
     }
+
+    std::cout << "[Writer] Done writing\n";
+    return 0;
 }
