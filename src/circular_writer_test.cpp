@@ -15,6 +15,7 @@ int main() {
 
     while (true) {
         float buf[blockSize];
+        std::cout << "Writing " << blockSize << " samples to shared memory\n";
         for (int i = 0; i < blockSize; ++i) {
             buf[i] = std::sin(phase);
             phase += twoPiF;
