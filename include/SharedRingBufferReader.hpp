@@ -1,51 +1,44 @@
 #pragma once
-#include <boost/interprocess/shared_memory_object.hpp>
-#include <boost/interprocess/mapped_region.hpp>
-#include <string>
+
+#include <boost/interprocess/managed_shared_memory.hpp>
 #include <iostream>
 #include <cstring>
-#include <thread>
-#include <chrono>
-
-namespace bip = boost::interprocess;
+#include <vector>
+#include <atomic>
 
 class SharedRingBufferReader {
 public:
-    SharedRingBufferReader(const std::string& name)
-        : shm_name(name) {
-        while (true) {
-            try {
-                shm = bip::shared_memory_object(bip::open_only, shm_name.c_str(), bip::read_only);
-                break;
-            } catch (const bip::interprocess_exception&) {
-                std::cout << "[Reader] Waiting for shared memory '" << shm_name << "'...\n";
-                std::this_thread::sleep_for(std::chrono::milliseconds(500));
-            }
-        }
+    // New constructor
+    SharedRingBufferReader(const std::string& shmName) {
+        segment = boost::interprocess::managed_shared_memory(boost::interprocess::open_only, shmName.c_str());
 
-        region = bip::mapped_region(shm, bip::read_only);
-        data = static_cast<const char*>(region.get_address());
-        buffer_size = region.get_size();
+        base = static_cast<char*>(segment.get_address());
+        writeIndex = reinterpret_cast<std::atomic<uint32_t>*>(base);
+        bufferSizeInSamples = *reinterpret_cast<uint32_t*>(base + 4);
+        samples = reinterpret_cast<float*>(base + 8);
 
-        std::cout << "[SharedRingBufferReader] Connected to shared memory: " 
-                  << buffer_size << " bytes." << std::endl;
+        std::cout << "[SharedRingBufferReader] Connected to shared memory. Buffer size: "
+                  << bufferSizeInSamples << " samples\n";
     }
 
-    void printData() const {
-        for (size_t i = 0; i < buffer_size && i < 64; ++i) {
-            std::cout << (int)(unsigned char)data[i] << " ";
+    std::vector<float> getLatestSamples(size_t N) {
+        std::vector<float> result(N);
+        uint32_t w = writeIndex->load(std::memory_order_acquire);
+        for (size_t i = 0; i < N; ++i) {
+            size_t idx = (w + bufferSizeInSamples - N + i) % bufferSizeInSamples;
+            result[i] = samples[idx];
         }
-        std::cout << std::endl;
+        return result;
     }
 
-    // ✅ Accessors for external use
-    const void* rawData() const { return static_cast<const void*>(data); }
-    size_t bufferSize() const { return buffer_size; }
+    size_t bufferSize() const {
+        return bufferSizeInSamples;
+    }
 
 private:
-    std::string shm_name;
-    bip::shared_memory_object shm;
-    bip::mapped_region region;
-    const char* data;
-    size_t buffer_size;
+    boost::interprocess::managed_shared_memory segment;
+    char* base;
+    std::atomic<uint32_t>* writeIndex;
+    uint32_t bufferSizeInSamples;
+    float* samples;
 };

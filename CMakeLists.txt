@@ -8,31 +8,35 @@ include_directories(${Boost_INCLUDE_DIRS})
 
 # Find libsndfile
 find_library(SNDFILE_LIBRARY sndfile REQUIRED)
+
 # Core headers
 include_directories(${CMAKE_SOURCE_DIR}/include)
 
-# Tool headers
-include_directories(${CMAKE_SOURCE_DIR}/tools)
+# Python/matplotlib support
+find_package(Python3 COMPONENTS Interpreter Development NumPy REQUIRED)
+include_directories(${Python3_INCLUDE_DIRS})
+include_directories(${Python3_NumPy_INCLUDE_DIRS})
+
+# matplotlib-cpp header
+include_directories(${CMAKE_SOURCE_DIR}/tools/matplotlib-cpp)
 
 # === Executables ===
+
 add_executable(ringbuffer_reader
     src/ringbuffer_reader.cpp
     include/SharedRingBufferReader.hpp
 )
 
-add_executable(write_test
-    src/ringbuffer_write_test.cpp
-    include/SharedRingBuffer.hpp
+add_executable(circular_writer_test
+    src/circular_writer_test.cpp
+    include/SharedRingBufferWriter.hpp
 )
 
-add_executable(read_test
-    src/ringbuffer_read_test.cpp
+add_executable(circular_reader_test
+    src/circular_reader_test.cpp
     include/SharedRingBufferReader.hpp
 )
 
-add_executable(export_test
-    src/export_test.cpp
+target_link_libraries(circular_reader_test
+    ${Python3_LIBRARIES}
 )
-
-target_link_libraries(export_test ${SNDFILE_LIBRARY})
-# No extra linking needed for header-only Boost.Interprocess
