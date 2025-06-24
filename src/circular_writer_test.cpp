@@ -7,26 +7,23 @@
 int main() {
     std::cout << "[Main] Entered writer test main()\n";
 
-    const char* shmName = "ringbuffer_audio";
-    const size_t bufferSizeInSamples = 48000;
-    SharedRingBufferWriter writer(shmName, bufferSizeInSamples);
+    constexpr uint32_t sampleRate = 48000;
+    constexpr uint32_t bufferSize = sampleRate;
 
-    const double sampleRate = 48000.0;
-    const double frequency = 440.0;
-    const double twoPiF = 2.0 * M_PI * frequency;
+    SharedRingBufferWriter writer("ringbuffer_audio", bufferSize);
 
-    for (int i = 0; i < 5; ++i) {
-        std::vector<float> samples(bufferSizeInSamples);
-        for (size_t j = 0; j < bufferSizeInSamples; ++j) {
-            samples[j] = static_cast<float>(std::sin(twoPiF * j / sampleRate));
+    uint64_t iteration = 0;
+    while (true) {
+        std::vector<float> samples(bufferSize);
+        for (uint32_t j = 0; j < bufferSize; ++j) {
+            samples[j] = std::sin(2 * M_PI * 440.0f * j / sampleRate);
         }
 
         writer.write(samples.data(), samples.size());
-        std::cout << "[Writer] Wrote " << samples.size() << " samples to shared memory (iteration " << i << ")\n";
+        std::cout << "[Writer] Wrote " << bufferSize << " samples to shared memory (iteration " << iteration++ << ")\n";
 
-        std::this_thread::sleep_for(std::chrono::seconds(1));
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
     }
 
-    std::cout << "[Writer] Done writing\n";
     return 0;
 }

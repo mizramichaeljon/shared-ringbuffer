@@ -3,40 +3,54 @@ project(SharedRingBufferExample)
 
 set(CMAKE_CXX_STANDARD 17)
 
+# === Boost ===
 find_package(Boost REQUIRED)
 include_directories(${Boost_INCLUDE_DIRS})
 
-# Find libsndfile
-find_library(SNDFILE_LIBRARY sndfile REQUIRED)
+# === libsndfile (optional, just found not used yet) ===
+find_library(SNDFILE_LIBRARY sndfile)
 
-# Core headers
+# === Core Headers ===
 include_directories(${CMAKE_SOURCE_DIR}/include)
 
-# Python/matplotlib support
+# === Python/matplotlib-cpp Support ===
+# Use the same Python executable as `pip3` (which is python3.12 here)
+set(Python3_EXECUTABLE "/Library/Frameworks/Python.framework/Versions/3.12/bin/python3" CACHE FILEPATH "" FORCE)
 find_package(Python3 COMPONENTS Interpreter Development NumPy REQUIRED)
 include_directories(${Python3_INCLUDE_DIRS})
 include_directories(${Python3_NumPy_INCLUDE_DIRS})
-
-# matplotlib-cpp header
 include_directories(${CMAKE_SOURCE_DIR}/tools/matplotlib-cpp)
 
 # === Executables ===
 
+# Reader: includes plotting support
 add_executable(ringbuffer_reader
     src/ringbuffer_reader.cpp
     include/SharedRingBufferReader.hpp
 )
 
+# Circular buffer writer (continuous)
 add_executable(circular_writer_test
     src/circular_writer_test.cpp
     include/SharedRingBufferWriter.hpp
 )
 
+# Circular buffer reader (with plotting)
 add_executable(circular_reader_test
     src/circular_reader_test.cpp
     include/SharedRingBufferReader.hpp
 )
 
+# Cleanup tool to remove shared memory segment
+add_executable(cleanup_shared_memory
+    src/cleanup.cpp
+)
+
+# === Link Python libs to plotting readers ===
 target_link_libraries(circular_reader_test
+    ${Python3_LIBRARIES}
+)
+
+target_link_libraries(ringbuffer_reader
     ${Python3_LIBRARIES}
 )

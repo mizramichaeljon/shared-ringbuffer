@@ -7,6 +7,12 @@ if [[ ! -f "CMakeLists.txt" ]]; then
   exit 1
 fi
 
+# Clean up shared memory segment
+if [[ -x build/cleanup_shared_memory ]]; then
+  echo "Cleaning shared memory..."
+  ./build/cleanup_shared_memory
+fi
+
 echo "Cleaning previous build..."
 rm -rf build
 
