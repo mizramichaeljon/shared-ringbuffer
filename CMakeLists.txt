@@ -14,8 +14,14 @@ find_library(SNDFILE_LIBRARY sndfile)
 include_directories(${CMAKE_SOURCE_DIR}/include)
 
 # === Python/matplotlib-cpp Support ===
-# Use the same Python executable as `pip3` (which is python3.12 here)
-set(Python3_EXECUTABLE "/Library/Frameworks/Python.framework/Versions/3.12/bin/python3" CACHE FILEPATH "" FORCE)
+# Try to find Python3 with matplotlib first, falling back to system default
+find_program(SYSTEM_PYTHON3 NAMES python3 REQUIRED)
+
+# Use that as a default, but allow override via cache
+set(Python3_EXECUTABLE "${SYSTEM_PYTHON3}" CACHE FILEPATH "Python interpreter" FORCE)
+
+# Continue finding interpreter/dev/numpy components
+find_package(Python3 COMPONENTS Interpreter Development NumPy REQUIRED)
 find_package(Python3 COMPONENTS Interpreter Development NumPy REQUIRED)
 include_directories(${Python3_INCLUDE_DIRS})
 include_directories(${Python3_NumPy_INCLUDE_DIRS})

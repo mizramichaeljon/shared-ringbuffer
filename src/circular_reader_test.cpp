@@ -7,41 +7,62 @@
 
 namespace plt = matplotlibcpp;
 
-int main() {
+int main()
+{
     std::cout << "[Main] Entered reader test main()\n";
     SharedRingBufferReader reader("ringbuffer_audio");
 
     constexpr int sampleRate = 48000;
     constexpr int N = sampleRate;
 
-    for (int i = 0; i < 3; ++i) {
+    for (int i = 0; i < 3; ++i)
+    {
         std::vector<float> out = reader.getLatestSamples(N);
 
-        if (out.empty()) {
+        if (out.empty())
+        {
             std::cerr << "[Reader] WARNING: Received empty sample buffer\n";
-        } else {
+        }
+        else
+        {
             std::cout << "[Reader] First sample: " << out.front()
                       << ", Last sample: " << out.back() << "\n";
         }
 
         // Save CSV for inspection
         std::ofstream csv("out_" + std::to_string(i) + ".csv");
-        for (float f : out) csv << f << "\n";
+        for (float f : out)
+            csv << f << "\n";
 
-        // Plot only if matplotlibcpp is available
-        try {
-            std::vector<int> x(N);
-            for (int j = 0; j < N; ++j) x[j] = j;
+        try
+        {
+            std::vector<int> x;
+            std::vector<float> y;
 
-            plt::figure_size(1200, 400);
-            plt::plot(x, out);
+            // Only take the first 1000 samples for clarity
+            int visibleSamples = std::min(N, 1000);
+            x.reserve(visibleSamples);
+            y.reserve(visibleSamples);
+
+            for (int j = 0; j < visibleSamples; ++j)
+            {
+                x.push_back(j);
+                y.push_back(out[j]);
+            }
+
+            plt::figure_size(1000, 400);
+            plt::plot(x, y);
             plt::title("Audio Buffer Snapshot " + std::to_string(i));
             plt::xlabel("Sample Index");
             plt::ylabel("Amplitude");
-            plt::save("waveform_" + std::to_string(i) + ".png");
-
-            std::cout << "[Plot] Saved waveform_" << i << ".png\n";
-        } catch (const std::exception& e) {
+            plt::ylim(-1.1, 1.1); // enforce full sine wave range
+            plt::grid(true);
+            plt::tight_layout();
+            plt::save("clean_waveform_" + std::to_string(i) + ".png");
+            std::cout << "[Plot] Saved clean_waveform_" << i << ".png\n";
+        }
+        catch (const std::exception &e)
+        {
             std::cerr << "[Plotting Error] Failed to create plot " << i
                       << ": " << e.what() << "\n";
         }
