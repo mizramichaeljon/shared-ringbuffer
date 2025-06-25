@@ -1,15 +1,8 @@
-# .gitignore
-/build/
-/CMakeFiles/
-/CMakeCache.txt
-/cmake_install.cmake
-/*.o
-/*.d
-/*.exe
-/*.dylib
-*.DS_Store
-/src/export_test.cpp
-/src/ringbuffer_to_wav.cpp
-/tools/
-/.vscode/
-/.venv/
+# Ignore test files and build outputs
+src/*.cpp
+*.csv
+*.png
+*.o
+*.out
+*.pyc
+__pycache__/
