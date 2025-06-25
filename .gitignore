@@ -1,5 +1,4 @@
 # Ignore test files and build outputs
-src/*.cpp
 *.csv
 *.png
 *.o
@@ -7,3 +6,7 @@ src/*.cpp
 *.pyc
 __pycache__/
 .DS_Store
+/build/
+.vscode
+rebuild.sh
+TODO.md
