@@ -1,51 +1,75 @@
 #pragma once
+
+#include "SharedRingBufferHeader.hpp"
 #include <boost/interprocess/managed_shared_memory.hpp>
 #include <boost/interprocess/allocators/allocator.hpp>
-#include <boost/interprocess/sync/interprocess_mutex.hpp>
-#include "SharedRingBufferHeader.hpp"
-#include <atomic>
-#include <vector>
+#include <iostream>
+#include <stdexcept>
+#include <cstring>
 
-class SharedRingBufferWriter
-{
+namespace bip = boost::interprocess;
+
+class SharedRingBufferWriter {
 public:
-    SharedRingBufferWriter(const std::string &shmName, uint32_t totalSamples)
-        : shmName(shmName), totalSamples(totalSamples)
+    SharedRingBufferWriter(const std::string& name, std::size_t numSamples)
+        : shmName(name), totalSamples(numSamples)
     {
-        segment = boost::interprocess::managed_shared_memory(
-            boost::interprocess::create_only,
-            shmName.c_str(),
-            calculateSize());
+        try {
+            // Attempt to create shared memory segment
+            segment = bip::managed_shared_memory(bip::create_only, shmName.c_str(), calculateSize());
 
-        header = segment.construct<SharedRingBufferHeader>("Header")();
-        segment.construct<float>("Samples")[totalSamples](0.0f);
+            // Create and initialize header
+            header = segment.construct<SharedRingBufferHeader>("Header")();
+            header->writeIndex.store(0, std::memory_order_release);
+            header->bufferSizeInSamples.store(totalSamples, std::memory_order_release);
 
-        header->writeIndex.store(0, std::memory_order_release);
-        header->bufferSizeInSamples.store(totalSamples, std::memory_order_release);
+            // Create and zero-initialize buffer
+            segment.construct<float>("Samples")[totalSamples](0.0f);
+
+            std::cout << "[Writer] Created new shared memory segment: " << shmName << "\n";
+        } catch (const bip::interprocess_exception& e) {
+            std::cerr << "[Writer] Shared memory exists. Attaching instead: " << e.what() << "\n";
+
+            // Open existing segment instead of failing
+            segment = bip::managed_shared_memory(bip::open_only, shmName.c_str());
+
+            // Get header and buffer
+            header = segment.find<SharedRingBufferHeader>("Header").first;
+            if (!header) throw std::runtime_error("[Writer] ERROR: Header not found in shared memory.");
+        }
     }
 
-    void write(const float *data, size_t count)
-    {
-        uint32_t w = header->writeIndex.load(std::memory_order_acquire);
-        uint32_t size = header->bufferSizeInSamples.load(std::memory_order_acquire);
+    ~SharedRingBufferWriter() {
+        // Detach, don't remove
+        // Shared memory segment stays alive until explicitly removed
+    }
 
-        float *samples = segment.find<float>("Samples").first;
-        for (size_t i = 0; i < count; ++i)
-        {
-            samples[(w + i) % size] = data[i];
+    void write(const float* data, std::size_t count) {
+        float* buffer = segment.find<float>("Samples").first;
+        if (!buffer) {
+            std::cerr << "[Writer] ERROR: Shared buffer not found.\n";
+            return;
         }
-        header->writeIndex.store((w + count) % size, std::memory_order_release);
+
+        std::size_t writeIdx = header->writeIndex.load(std::memory_order_acquire);
+        std::size_t bufferSize = header->bufferSizeInSamples.load(std::memory_order_acquire);
+
+        for (std::size_t i = 0; i < count; ++i) {
+            buffer[(writeIdx + i) % bufferSize] = data[i];
+        }
+
+        header->writeIndex.store((writeIdx + count) % bufferSize, std::memory_order_release);
     }
 
 private:
     std::string shmName;
-    uint32_t totalSamples;
-    boost::interprocess::managed_shared_memory segment;
-    SharedRingBufferHeader *header;
+    std::size_t totalSamples;
 
-    size_t calculateSize() const
-    {
-        constexpr size_t padding = 4096;
-        return sizeof(SharedRingBufferHeader) + sizeof(float) * totalSamples + padding;
+    bip::managed_shared_memory segment;
+    SharedRingBufferHeader* header = nullptr;
+
+    std::size_t calculateSize() const {
+        // 1MB buffer overhead plus data
+        return totalSamples * sizeof(float) + 1024 * 1024;
     }
 };
