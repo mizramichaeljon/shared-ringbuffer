@@ -3,46 +3,49 @@
 #include <chrono>
 #include <thread>
 #include <iostream>
+#include <csignal>
+#include <atomic>
+
+std::atomic<bool> running(true);
+
+void handle_sigint(int) {
+    std::cout << "\n[Signal] SIGINT received. Exiting...\n";
+    running = false;
+}
 
 int main()
 {
+    std::signal(SIGINT, handle_sigint);
+
     std::cout << "[Main] Entered writer test main()\n";
 
     constexpr uint32_t sampleRate = 48000;
-    constexpr uint32_t bufferSize = sampleRate;
+    constexpr uint32_t blockSize = 64;           // Match SC block size
+    constexpr uint32_t bufferSize = sampleRate;  // 1 second ring buffer
 
     SharedRingBufferWriter writer("ringbuffer_audio", bufferSize);
-
-    // Generate a 1kHz sine wave for 48000 samples (1 second at 48kHz)
-    constexpr float frequency = 1000.0f;
-    std::vector<float> sineWave(bufferSize);
-
-    for (size_t i = 0; i < sineWave.size(); ++i)
-    {
-        sineWave[i] = std::sin(2.0f * M_PI * frequency * (i / static_cast<float>(sampleRate)));
-    }
-
-    // Write once into shared memory
-    writer.write(sineWave.data(), sineWave.size());
-    std::cout << "[Writer] Wrote " << sineWave.size() << " sine samples to shared memory.\n";
 
     uint64_t globalSampleIndex = 0;
     uint64_t iteration = 0;
 
-    while (true)
+    auto nextWriteTime = std::chrono::steady_clock::now();
+
+    while (running)
     {
-        std::vector<float> samples(bufferSize);
-        for (uint32_t j = 0; j < bufferSize; ++j)
+        std::vector<float> block(blockSize);
+        for (uint32_t i = 0; i < blockSize; ++i)
         {
             float t = static_cast<float>(globalSampleIndex++) / sampleRate;
-            samples[j] = std::sin(2.0f * M_PI * 440.0f * t);
+            block[i] = std::sin(2.0f * M_PI * 440.0f * t);
         }
 
-        writer.write(samples.data(), samples.size());
-        std::cout << "[Writer] Wrote " << bufferSize << " samples to shared memory (iteration " << iteration++ << ")\n";
+        writer.write(block.data(), block.size());
+        std::cout << "[Writer] Wrote block " << iteration++ << " (" << blockSize << " samples)\n";
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        nextWriteTime += std::chrono::microseconds((1'000'000 * blockSize) / sampleRate);
+        std::this_thread::sleep_until(nextWriteTime);
     }
 
+    std::cout << "[Main] Writer exited cleanly.\n";
     return 0;
 }
