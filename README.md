@@ -1,6 +1,6 @@
 # shared-ringbuffer
 
-A lightweight C++ header-only shared-memory ring buffer for passing raw audio samples between processes — e.g. from a SuperCollider UGen to openFrameworks.
+A lightweight C++ header-only shared-memory ring buffer for passing raw audio samples between processes
 
 ## ✨ Features
 
@@ -75,3 +75,40 @@ ipcrm -M 0x...
 ```
 
 Or use the included `cleanup.cpp` tool.
+
+## 🪟 Windows Setup
+
+### Step 1: Install dependencies
+
+- [CMake](https://cmake.org/download/)
+- [Visual Studio](https://visualstudio.microsoft.com/) with “Desktop development with C++” workload
+- [Boost](https://www.boost.org/) (or install via [vcpkg](https://vcpkg.io))
+
+### Step 2: Clone the project
+
+```sh
+git clone https://github.com/yourusername/shared-ringbuffer.git
+cd shared-ringbuffer
+```
+
+### Step 3: Configure CMake
+
+If using a custom Boost install (e.g. with vcpkg):
+
+```sh
+cmake -B build -DBOOST_ROOT="C:/path/to/boost"
+```
+
+Or with system-wide Boost:
+
+```sh
+cmake -B build
+```
+
+### Step 4: Build the CLI tools
+
+```sh
+cmake --build build --config Release
+```
+
+Executables will be in `build/`.
