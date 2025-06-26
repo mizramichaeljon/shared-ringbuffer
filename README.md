@@ -1,6 +1,6 @@
 # SharedRingBuffer
 
-A lightweight C++ header-only ring buffer implementation using shared memory. Designed for **real-time audio IPC** between processes (e.g. writing from a SuperCollider plugin, reading in an OpenFrameworks visualizer).
+A lightweight C++ header-only ring buffer implementation using shared memory. Designed for **real-time audio IPC** between processes.
 
 ## Features
 
