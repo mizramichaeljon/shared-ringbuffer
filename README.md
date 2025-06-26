@@ -1,58 +1,119 @@
-# shared-ringbuffer
+# SharedRingBuffer
 
-A lightweight C++ header-only shared-memory ring buffer for passing raw audio samples between processes
+A lightweight C++ header-only ring buffer implementation using shared memory. Designed for **real-time audio IPC** between processes (e.g. writing from a SuperCollider plugin, reading in an OpenFrameworks visualizer).
 
-## ✨ Features
+## Features
 
-- **Header-only**: Easy to include and integrate in any C++ project
-- **Real-time friendly**: Lock-free write/read operations using atomic indices
-- **Cross-process**: Uses Boost.Interprocess to create a shared memory segment accessible across applications
-- **Designed for audio**: Buffers raw `float` audio data; intended for block-based audio systems like SuperCollider
+- **Header-only** design (easy to include)
+- Built on `boost::interprocess`
+- Lock-free writes using atomics
+- CLI tools for testing/debugging
 
-## 📦 Components
+## Requirements
 
-- `SharedRingBufferHeader.hpp`: Defines shared atomic state (`writeIndex`, `bufferSizeInSamples`)
-- `SharedRingBufferWriter.hpp`: Creates and writes to the shared buffer
-- `SharedRingBufferReader.hpp`: Reads from the shared buffer in a circular (wrap-around) manner
+- C++17 compiler
+- Boost (for CLI tools only)
+- CMake ≥ 3.10 (for building CLI tools)
 
-## 🛠️ Usage
+---
 
-### Writer Setup
+## 🔧 Building CLI Tools
+
+### macOS / Linux
+
+Install dependencies via [Homebrew](https://brew.sh) (or your distro’s package manager):
+
+```bash
+brew install cmake boost
+```
+
+Then build:
+
+```bash
+git clone https://github.com/mizramichaeljon/shared-ringbuffer.git
+cd shared-ringbuffer
+chmod +x build_macos.sh
+./build_macos.sh
+```
+
+### Windows
+
+Install [CMake](https://cmake.org/) and [Boost](https://www.boost.org/).
+
+We recommend using [vcpkg](https://github.com/microsoft/vcpkg) to install Boost:
+
+```bash
+vcpkg install boost
+```
+
+Then build:
+
+```cmd
+git clone https://github.com/mizramichaeljon/shared-ringbuffer.git
+cd shared-ringbuffer
+build_windows.bat
+```
+
+This builds:
+- `circular_reader_test` – continuously reads shared memory
+- `circular_writer_test` – emits dummy sine data
+- `cleanup` – removes the shared memory segment (useful for debugging)
+
+---
+
+## 🧠 How It Works
+
+The writer and reader communicate via a named shared memory segment. Data is passed using a raw float buffer and a small metadata `struct`.
+
+### Ring Buffer Header Struct:
 
 ```cpp
+struct SharedRingBufferHeader {
+    std::atomic<uint32_t> writeIndex;
+    std::atomic<uint32_t> bufferSizeInSamples;
+    std::atomic<bool> hasWrittenData;
+};
+```
+
+## ✍️ Writing to Shared Memory
+
+Use the `SharedRingBufferWriter` class. Example:
+
+```cpp
+#include "SharedRingBufferWriter.hpp"
+
 SharedRingBufferWriter writer("ringbuffer_audio", 48000); // 1 second buffer @ 48kHz
 
-std::vector<float> block(64); // SuperCollider block size
-
+std::vector<float> block(64); // e.g. a block of audio samples
 // Fill block with audio samples...
 writer.write(block.data(), block.size());
 ```
 
-### Reader Setup
+This will automatically create or attach to the shared memory segment and publish data into the ring buffer.
+
+## 📖 Reading from Shared Memory
+
+Use the `SharedRingBufferReader` class. Example:
 
 ```cpp
+#include "SharedRingBufferReader.hpp"
+
 SharedRingBufferReader reader("ringbuffer_audio");
 
-std::vector<float> recentSamples = reader.getLatestSamples(1024); // e.g., 1024 most recent samples
+std::vector<float> latest = reader.getLatestSamples(512);
 ```
 
-## 🔗 Integration
+Before drawing or processing the data, you can verify validity:
 
-Add the `include/` directory to your project and include the relevant header(s). No compilation needed.
-
-### CMake Example (SuperCollider plugin)
-
-```cmake
-target_include_directories(MyUGen PRIVATE ${SHARED_RINGBUFFER_PATH}/include)
+```cpp
+if (reader.hasReceivedValidData()) {
+    // process data, etc.
+}
 ```
 
-## ✅ Tested with
+---
 
-- SuperCollider custom UGens (block-size based writes)
-- openFrameworks (realtime visualisation via reads)
-- Independent test tools for debugging and plotting
-
-## 📂 Optional Test Utilities
+## 🧪 Tests & CLI Utilities
 
 Located in `src/`, but **not required** for core use:
 
@@ -60,55 +121,17 @@ Located in `src/`, but **not required** for core use:
 - `circular_reader_test.cpp` — reads and prints values
 - `cleanup.cpp` — removes shared memory segment (useful for debugging)
 
-## 📎 Notes
+---
 
-- Boost is required at runtime for shared memory support
-- Make sure to call the writer before the reader to ensure the memory segment is initialized
-- For debugging, test tools can be kept in a `dev-ringbuffer-tests` branch
+## 👀 Examples
 
-## 🧹 Cleanup
+To see the ring buffer in use:
 
-If your system retains a stale shared memory block after crashes:
+- 🔉 SuperCollider UGen writer: [TapOutUgen](https://github.com/mizramichaeljon/TapOutUgen)
+- 📈 Visualizer built with OpenFrameworks: [ringBufferVisual](https://github.com/mizramichaeljon/ringBufferVisual)
 
-```sh
-ipcrm -M 0x...
-```
+---
 
-Or use the included `cleanup.cpp` tool.
+## 📦 License
 
-## 🪟 Windows Setup
-
-### Step 1: Install dependencies
-
-- [CMake](https://cmake.org/download/)
-- [Visual Studio](https://visualstudio.microsoft.com/) with “Desktop development with C++” workload
-- [Boost](https://www.boost.org/) (or install via [vcpkg](https://vcpkg.io))
-
-### Step 2: Clone the project
-
-```sh
-git clone https://github.com/yourusername/shared-ringbuffer.git
-cd shared-ringbuffer
-```
-
-### Step 3: Configure CMake
-
-If using a custom Boost install (e.g. with vcpkg):
-
-```sh
-cmake -B build -DBOOST_ROOT="C:/path/to/boost"
-```
-
-Or with system-wide Boost:
-
-```sh
-cmake -B build
-```
-
-### Step 4: Build the CLI tools
-
-```sh
-cmake --build build --config Release
-```
-
-Executables will be in `build/`.
+MIT
