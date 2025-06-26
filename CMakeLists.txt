@@ -8,16 +8,22 @@ include_directories(${CMAKE_SOURCE_DIR}/include)
 message(STATUS "Configured SharedRingBuffer as a header-only library.")
 
 # === Optional: CLI tools ===
-option(BUILD_RINGBUFFER_READER "Build the CLI ringbuffer reader" ON)
+option(BUILD_RINGBUFFER_TOOLS "Build CLI tools (reader/writer/debug)" ON)
 
-if(BUILD_RINGBUFFER_READER)
+if(BUILD_RINGBUFFER_TOOLS)
     find_package(Boost REQUIRED)
 
-    add_executable(ringbuffer_reader src/ringbuffer_reader.cpp)
+    # === CLI tools ===
+    add_executable(circular_reader_test src/circular_reader_test.cpp)
+    add_executable(circular_writer_test src/circular_writer_test.cpp)
     add_executable(cleanup src/cleanup.cpp)
 
-    # Include Boost and our headers for both tools
-    target_include_directories(ringbuffer_reader PRIVATE
+    # === Include paths ===
+    target_include_directories(circular_reader_test PRIVATE
+        ${CMAKE_SOURCE_DIR}/include
+        ${Boost_INCLUDE_DIRS}
+    )
+    target_include_directories(circular_writer_test PRIVATE
         ${CMAKE_SOURCE_DIR}/include
         ${Boost_INCLUDE_DIRS}
     )
@@ -26,7 +32,8 @@ if(BUILD_RINGBUFFER_READER)
         ${Boost_INCLUDE_DIRS}
     )
 
-    # Link Boost libs (not strictly needed for header-only usage, but safe)
-    target_link_libraries(ringbuffer_reader PRIVATE ${Boost_LIBRARIES})
+    # === Link Boost (safely even if unused) ===
+    target_link_libraries(circular_reader_test PRIVATE ${Boost_LIBRARIES})
+    target_link_libraries(circular_writer_test PRIVATE ${Boost_LIBRARIES})
     target_link_libraries(cleanup PRIVATE ${Boost_LIBRARIES})
 endif()
