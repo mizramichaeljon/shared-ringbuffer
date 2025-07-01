@@ -9,55 +9,71 @@ A lightweight C++ header-only ring buffer implementation using shared memory. De
 - Lock-free writes using atomics
 - CLI tools for testing/debugging
 
+---
+
 ## Requirements
 
-- C++17 compiler
-- Boost (for CLI tools only)
+- C++17-compatible compiler
+- Boost (only required to build CLI tools)
 - CMake ≥ 3.10 (for building CLI tools)
 
 ---
 
 ## 🔧 Building CLI Tools
 
+These tools are not required to use the core header files — they are useful for testing shared memory communication.
+
 ### macOS / Linux
 
-Install dependencies via [Homebrew](https://brew.sh) (or your distro’s package manager):
+#### Step 1: Install dependencies
 
 ```bash
 brew install cmake boost
 ```
 
-Then build:
+#### Step 2: Clone and build
 
 ```bash
-git clone https://github.com/mizramichaeljon/shared-ringbuffer.git
-cd shared-ringbuffer
-chmod +x build_macos.sh
-./build_macos.sh
+git clone https://github.com/mizramichaeljon/shared-ringbuffer.git <path-to-shared-ringbuffer>
+cd <path-to-shared-ringbuffer>
+mkdir build && cd build
+cmake .. -DBUILD_RINGBUFFER_TOOLS=ON
+cmake --build .
 ```
+
+Executables will be located in `./build/`.
+
+---
 
 ### Windows
 
-Install [CMake](https://cmake.org/) and [Boost](https://www.boost.org/).
+#### Step 1: Install [vcpkg](https://github.com/microsoft/vcpkg)
 
-We recommend using [vcpkg](https://github.com/microsoft/vcpkg) to install Boost:
+```cmd
+git clone https://github.com/microsoft/vcpkg <path-to-vcpkg>
+cd <path-to-vcpkg>
+bootstrap-vcpkg.bat
+```
 
-```bash
+#### Step 2: Install Boost
+
+```cmd
 vcpkg install boost
 ```
 
-Then build:
+#### Step 3: Clone and build project
 
 ```cmd
-git clone https://github.com/mizramichaeljon/shared-ringbuffer.git
-cd shared-ringbuffer
-build_windows.bat
+git clone https://github.com/mizramichaeljon/shared-ringbuffer.git <path-to-shared-ringbuffer>
+cd <path-to-shared-ringbuffer>
+mkdir build
+cd build
+
+cmake .. -DBUILD_RINGBUFFER_TOOLS=ON -DCMAKE_TOOLCHAIN_FILE=<path-to-vcpkg>\scripts\buildsystems\vcpkg.cmake
+cmake --build . --config Release
 ```
 
-This builds:
-- `circular_reader_test` – continuously reads shared memory
-- `circular_writer_test` – emits dummy sine data
-- `cleanup` – removes the shared memory segment (useful for debugging)
+Executables will be located in `.\build\Release\`.
 
 ---
 
@@ -75,6 +91,8 @@ struct SharedRingBufferHeader {
 };
 ```
 
+---
+
 ## ✍️ Writing to Shared Memory
 
 Use the `SharedRingBufferWriter` class. Example:
@@ -90,6 +108,8 @@ writer.write(block.data(), block.size());
 ```
 
 This will automatically create or attach to the shared memory segment and publish data into the ring buffer.
+
+---
 
 ## 📖 Reading from Shared Memory
 
@@ -113,13 +133,13 @@ if (reader.hasReceivedValidData()) {
 
 ---
 
-## 🧪 Tests & CLI Utilities
+## 🧪 CLI Test Utilities
 
-Located in `src/`, but **not required** for core use:
+Located in `src/`, but **not required** for normal use:
 
 - `circular_writer_test.cpp` — emits sine waves in blocks
 - `circular_reader_test.cpp` — reads and prints values
-- `cleanup.cpp` — removes shared memory segment (useful for debugging)
+- `cleanup.cpp` — removes shared memory segment 
 
 ---
 

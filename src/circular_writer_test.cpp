@@ -6,6 +6,10 @@
 #include <csignal>
 #include <atomic>
 
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
 std::atomic<bool> running(true);
 
 void handle_sigint(int) {
