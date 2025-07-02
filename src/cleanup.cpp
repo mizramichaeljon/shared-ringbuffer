@@ -1,6 +1,7 @@
-// cleanup.cpp
+
 #include <boost/interprocess/shared_memory_object.hpp>
 #include <iostream>
+
 int main() {
     const char* shmName = "ringbuffer_audio";
     bool removed = boost::interprocess::shared_memory_object::remove(shmName);
@@ -9,5 +10,8 @@ int main() {
     } else {
         std::cout << "[Cleanup] Shared memory not found or already removed: " << shmName << std::endl;
     }
+
+    std::cout << "Press Enter to exit..." << std::endl;
+    std::cin.get();
     return 0;
 }

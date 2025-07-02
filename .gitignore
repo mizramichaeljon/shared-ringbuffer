@@ -10,3 +10,4 @@ __pycache__/
 .vscode
 
 TODO.md
+build.bat
