@@ -9,12 +9,14 @@
 
 namespace bip = boost::interprocess;
 
-class SharedRingBufferWriter {
+class SharedRingBufferWriter
+{
 public:
-    SharedRingBufferWriter(const std::string& name, std::size_t numSamples)
+    SharedRingBufferWriter(const std::string &name, std::size_t numSamples)
         : shmName(name), totalSamples(numSamples)
     {
-        try {
+        try
+        {
             // Attempt to create shared memory segment
             segment = bip::managed_shared_memory(bip::create_only, shmName.c_str(), calculateSize());
 
@@ -27,7 +29,9 @@ public:
             segment.construct<float>("Samples")[totalSamples](0.0f);
 
             std::cout << "[Writer] Created new shared memory segment: " << shmName << "\n";
-        } catch (const bip::interprocess_exception& e) {
+        }
+        catch (const bip::interprocess_exception &e)
+        {
             std::cerr << "[Writer] Shared memory exists. Attaching instead: " << e.what() << "\n";
 
             // Open existing segment instead of failing
@@ -35,18 +39,40 @@ public:
 
             // Get header and buffer
             header = segment.find<SharedRingBufferHeader>("Header").first;
-            if (!header) throw std::runtime_error("[Writer] ERROR: Header not found in shared memory.");
+            if (!header)
+                throw std::runtime_error("[Writer] ERROR: Header not found in shared memory.");
         }
     }
 
-    ~SharedRingBufferWriter() {
+    // Attach-only mode: expects the shared memory to already exist
+    SharedRingBufferWriter(const std::string &name)
+        : shmName(name)
+    {
+        try
+        {
+            segment = bip::managed_shared_memory(bip::open_only, shmName.c_str());
+
+            header = segment.find<SharedRingBufferHeader>("Header").first;
+            if (!header)
+                throw std::runtime_error("[Writer] ERROR: Header not found in shared memory.");
+        }
+        catch (const bip::interprocess_exception &e)
+        {
+            throw std::runtime_error(std::string("[Writer] ERROR: Failed to attach to shared memory: ") + e.what());
+        }
+    }
+
+    ~SharedRingBufferWriter()
+    {
         // Detach, don't remove
         // Shared memory segment stays alive until explicitly removed
     }
 
-    void write(const float* data, std::size_t count) {
-        float* buffer = segment.find<float>("Samples").first;
-        if (!buffer) {
+    void write(const float *data, std::size_t count)
+    {
+        float *buffer = segment.find<float>("Samples").first;
+        if (!buffer)
+        {
             std::cerr << "[Writer] ERROR: Shared buffer not found.\n";
             return;
         }
@@ -54,7 +80,8 @@ public:
         std::size_t writeIdx = header->writeIndex.load(std::memory_order_acquire);
         std::size_t bufferSize = header->bufferSizeInSamples.load(std::memory_order_acquire);
 
-        for (std::size_t i = 0; i < count; ++i) {
+        for (std::size_t i = 0; i < count; ++i)
+        {
             buffer[(writeIdx + i) % bufferSize] = data[i];
         }
 
@@ -67,9 +94,10 @@ private:
     std::size_t totalSamples;
 
     bip::managed_shared_memory segment;
-    SharedRingBufferHeader* header = nullptr;
+    SharedRingBufferHeader *header = nullptr;
 
-    std::size_t calculateSize() const {
+    std::size_t calculateSize() const
+    {
         // 1MB buffer overhead plus data
         return totalSamples * sizeof(float) + 1024 * 1024;
     }
